@@ -7,38 +7,40 @@ import (
 )
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var payload UserLogin
+	var loginPayload LoginPayload
 
 	// tries to decode the body data to payload variable
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&loginPayload); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	// gets the jwt token
-	token, err := Login(&payload)
+	token, err := Login(&loginPayload)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 	}
 
-	// sets the token
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	// sets the token as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:  "token",
+		Value: token,
+	})
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var payload UserRegister
+	var registerPayload RegisterPayload
 
 	// tries to decode the body data to payload variable
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&registerPayload); err != nil {
 		fmt.Println(err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	// tries to register the user
-	if err := Register(&payload); err != nil {
+	if err := Register(&registerPayload); err != nil {
 		fmt.Println(err)
 		http.Error(w, "Failed to register new user", http.StatusBadRequest)
 		return

@@ -8,7 +8,7 @@ import (
 
 type Subscription struct {
 	ID     primitive.ObjectID `json:"id" bson:"_id"`
-	UserID string             `json:"userID" bson:"userID"`
+	UserID primitive.ObjectID `json:"userID" bson:"userID"`
 
 	Name          string    `json:"name" bson:"name"`
 	Price         float64   `json:"price" bson:"price"`

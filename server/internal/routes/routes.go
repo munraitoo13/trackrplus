@@ -2,25 +2,29 @@ package routes
 
 import (
 	"server/internal/auth"
+	"server/internal/middlewares"
 	"server/internal/subscriptions"
 
 	"github.com/go-chi/chi/v5"
 )
 
 func SetupRoutes(r chi.Router) {
-	r.Route("/api", func(api chi.Router) {
+	r.Route("/api", func(r chi.Router) {
 		// auth
-		api.Post("/login", auth.LoginHandler)
-		api.Post("/register", auth.RegisterHandler)
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", auth.LoginHandler)
+			r.Post("/register", auth.RegisterHandler)
+		})
 
 		// subscriptions
-		api.Route("/subscriptions", func(subs chi.Router) {
-			subs.Get("/", subscriptions.GetSubscriptionsHandler)
-			subs.Post("/", subscriptions.CreateSubscriptionHandler)
+		r.Route("/subscriptions", func(r chi.Router) {
+			r.Use(middlewares.AuthMiddleware)
+			r.Get("/", subscriptions.GetSubscriptionsHandler)
+			r.Post("/", subscriptions.CreateSubscriptionHandler)
 
-			subs.Get("/{id}", subscriptions.GetSubscriptionHandler)
-			subs.Put("/{id}", subscriptions.UpdateSubscriptionHandler)
-			subs.Delete("/{id}", subscriptions.DeleteSubscriptionHandler)
+			r.Get("/{id}", subscriptions.GetSubscriptionHandler)
+			r.Put("/{id}", subscriptions.UpdateSubscriptionHandler)
+			r.Delete("/{id}", subscriptions.DeleteSubscriptionHandler)
 		})
 	})
 }

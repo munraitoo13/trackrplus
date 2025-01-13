@@ -21,12 +21,12 @@ type User struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
-type UserLogin struct {
+type LoginPayload struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type UserRegister struct {
+type RegisterPayload struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`
 	Email    string `json:"email"`

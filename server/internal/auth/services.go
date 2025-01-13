@@ -4,14 +4,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
-	"server/configs"
+	"server/internal/common"
 )
 
-func Login(payload *UserLogin) (string, error) {
+func Login(payload *LoginPayload) (string, error) {
 	var err error
 
 	// gets user by its email
@@ -27,7 +25,7 @@ func Login(payload *UserLogin) (string, error) {
 	}
 
 	// generate the jwt token
-	token, err := GenerateToken(user.ID)
+	token, err := common.GenerateToken(user.ID)
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +33,7 @@ func Login(payload *UserLogin) (string, error) {
 	return token, nil
 }
 
-func Register(payload *UserRegister) error {
+func Register(payload *RegisterPayload) error {
 	// check if the email already exists
 	_, err := GetUserByEmail(payload.Email)
 	if err == nil {
@@ -66,22 +64,4 @@ func Register(payload *UserRegister) error {
 	}
 
 	return nil
-}
-
-func GenerateToken(userID primitive.ObjectID) (string, error) {
-	secretKey := configs.GetEnv("SECRET_KEY")
-
-	// jwt claims
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userID": userID,
-		"exp":    time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	// sign the claims with secret key
-	token, err := claims.SignedString([]byte(secretKey))
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
 }

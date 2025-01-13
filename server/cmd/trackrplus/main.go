@@ -8,6 +8,7 @@ import (
 	"server/configs"
 	"server/internal/auth"
 	"server/internal/routes"
+	"server/internal/subscriptions"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -35,6 +36,7 @@ func main() {
 
 	// initializing repos
 	auth.RepoInit(client)
+	subscriptions.RepoInit(client)
 
 	// closing the mongo client
 	defer func() {
