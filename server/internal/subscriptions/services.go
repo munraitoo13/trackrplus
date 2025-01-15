@@ -25,12 +25,12 @@ func GetSubscriptionsService(ctx context.Context) (*Subscriptions, error) {
 	return subscriptions, nil
 }
 
-func GetSubscriptionService(ctx context.Context, subID primitive.ObjectID) (*Subscription, error) {
+func GetSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) (*Subscription, error) {
 	// gets the user id from the token
 	userID := ctx.Value("userID").(primitive.ObjectID)
 
 	// gets the subscription
-	subscription, err := GetSubscription(userID, subID)
+	subscription, err := GetSubscription(userID, subscriptionID)
 	if err != nil {
 		return nil, errors.New("error getting subscriptions")
 	}
@@ -38,6 +38,10 @@ func GetSubscriptionService(ctx context.Context, subID primitive.ObjectID) (*Sub
 	// checks if the subscription exists
 	if subscription == nil {
 		return nil, errors.New("subscription not found")
+	}
+
+	if subscription.UserID != userID {
+		return nil, errors.New("unauthorized")
 	}
 
 	return subscription, nil
@@ -54,6 +58,8 @@ func CreateSubscriptionService(ctx context.Context, payload *Subscription) error
 		CardLast4:     payload.CardLast4,
 		Paid:          payload.Paid,
 		RenewalDate:   payload.RenewalDate,
+		Notes:         payload.Notes,
+		CreatedAt:     payload.CreatedAt,
 	}
 
 	if err := CreateSubscription(subscription); err != nil {
@@ -63,8 +69,17 @@ func CreateSubscriptionService(ctx context.Context, payload *Subscription) error
 	return nil
 }
 
-func UpdateSubscriptionService(ctx context.Context, payload *Subscription, subID primitive.ObjectID) error {
+func UpdateSubscriptionService(ctx context.Context, payload *Subscription, subscriptionID primitive.ObjectID) error {
 	userID := ctx.Value("userID").(primitive.ObjectID)
+
+	existingSubscription, err := GetSubscription(userID, subscriptionID)
+	if err != nil {
+		return errors.New("error getting subscriptions")
+	}
+
+	if existingSubscription == nil || existingSubscription.UserID != userID {
+		return errors.New("unauthorized")
+	}
 
 	subscription := &Subscription{
 		UserID:        userID,
@@ -75,18 +90,29 @@ func UpdateSubscriptionService(ctx context.Context, payload *Subscription, subID
 		Paid:          payload.Paid,
 		RenewalDate:   payload.RenewalDate,
 		Notes:         payload.Notes,
-		CreatedAt:     payload.CreatedAt,
+		CreatedAt:     existingSubscription.CreatedAt,
 	}
 
-	if err := UpdateSubscription(subID, subscription); err != nil {
+	if err := UpdateSubscription(subscriptionID, subscription); err != nil {
 		return errors.New("error creating subscription")
 	}
 
 	return nil
 }
 
-func DeleteSubscriptionService(subID primitive.ObjectID) error {
-	if err := DeleteSubscription(subID); err != nil {
+func DeleteSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) error {
+	userID := ctx.Value("userID").(primitive.ObjectID)
+
+	existingSubscription, err := GetSubscription(userID, subscriptionID)
+	if err != nil {
+		return errors.New("error getting subscriptions")
+	}
+
+	if existingSubscription == nil || existingSubscription.UserID != userID {
+		return errors.New("unauthorized")
+	}
+
+	if err := DeleteSubscription(subscriptionID); err != nil {
 		return errors.New("error deleting subscription")
 	}
 

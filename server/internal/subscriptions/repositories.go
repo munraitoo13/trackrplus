@@ -32,11 +32,11 @@ func GetSubscriptions(userID primitive.ObjectID) (*Subscriptions, error) {
 	return &subscriptions, nil
 }
 
-func GetSubscription(userID primitive.ObjectID, subID primitive.ObjectID) (*Subscription, error) {
+func GetSubscription(userID primitive.ObjectID, subscriptionID primitive.ObjectID) (*Subscription, error) {
 	var subscription Subscription
 
 	// gets the subscription from db
-	sub := subscriptionColl.FindOne(context.TODO(), bson.M{"userID": userID, "_id": subID})
+	sub := subscriptionColl.FindOne(context.TODO(), bson.M{"userID": userID, "_id": subscriptionID})
 	if sub.Err() != nil {
 		return nil, sub.Err()
 	}
@@ -59,8 +59,8 @@ func CreateSubscription(subscription *Subscription) error {
 	return nil
 }
 
-func DeleteSubscription(subID primitive.ObjectID) error {
-	_, err := subscriptionColl.DeleteOne(context.TODO(), bson.M{"_id": subID})
+func DeleteSubscription(subscriptionID primitive.ObjectID) error {
+	_, err := subscriptionColl.DeleteOne(context.TODO(), bson.M{"_id": subscriptionID})
 	if err != nil {
 		return err
 	}
@@ -68,8 +68,8 @@ func DeleteSubscription(subID primitive.ObjectID) error {
 	return nil
 }
 
-func UpdateSubscription(subID primitive.ObjectID, subscription *Subscription) error {
-	_, err := subscriptionColl.ReplaceOne(context.TODO(), bson.M{"_id": subID}, subscription)
+func UpdateSubscription(subscriptionID primitive.ObjectID, subscription *Subscription) error {
+	_, err := subscriptionColl.ReplaceOne(context.TODO(), bson.M{"_id": subscriptionID}, subscription)
 	if err != nil {
 		return err
 	}

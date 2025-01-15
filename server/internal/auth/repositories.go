@@ -14,13 +14,13 @@ func RepoInit(client *mongo.Client) {
 }
 
 func GetUserByEmail(email string) (*User, error) {
-	var user User
+	var user *User
 	err := userColl.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 func RegisterUser(user *User) error {

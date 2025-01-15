@@ -25,14 +25,14 @@ func GetSubscriptionsHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	// get the url param
-	subID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
+	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// gets the user's specified subscription
-	subscription, err := GetSubscriptionService(r.Context(), subID)
+	subscription, err := GetSubscriptionService(r.Context(), subscriptionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -65,7 +65,7 @@ func UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	var subscriptionPayload *Subscription
 
 	// get the url param
-	subID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
+	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -78,7 +78,7 @@ func UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// tries to update the subscription
-	if err := UpdateSubscriptionService(r.Context(), subscriptionPayload, subID); err != nil {
+	if err := UpdateSubscriptionService(r.Context(), subscriptionPayload, subscriptionID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -86,14 +86,14 @@ func UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 
 func DeleteSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	// get the url param
-	subID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
+	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// tries to delete the subscription
-	if err := DeleteSubscription(subID); err != nil {
+	if err := DeleteSubscriptionService(r.Context(), subscriptionID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

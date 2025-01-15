@@ -7,7 +7,7 @@ import (
 )
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var loginPayload LoginPayload
+	var loginPayload *LoginPayload
 
 	// tries to decode the body data to payload variable
 	if err := json.NewDecoder(r.Body).Decode(&loginPayload); err != nil {
@@ -16,7 +16,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// gets the jwt token
-	token, err := Login(&loginPayload)
+	token, err := LoginService(loginPayload)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -30,7 +30,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var registerPayload RegisterPayload
+	var registerPayload *RegisterPayload
 
 	// tries to decode the body data to payload variable
 	if err := json.NewDecoder(r.Body).Decode(&registerPayload); err != nil {
@@ -40,7 +40,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// tries to register the user
-	if err := Register(&registerPayload); err != nil {
+	if err := RegisterService(registerPayload); err != nil {
 		fmt.Println(err)
 		http.Error(w, "Failed to register new user", http.StatusBadRequest)
 		return

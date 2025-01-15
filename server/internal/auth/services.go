@@ -9,7 +9,7 @@ import (
 	"server/internal/common"
 )
 
-func Login(payload *LoginPayload) (string, error) {
+func LoginService(payload *LoginPayload) (string, error) {
 	var err error
 
 	// gets user by its email
@@ -33,7 +33,7 @@ func Login(payload *LoginPayload) (string, error) {
 	return token, nil
 }
 
-func Register(payload *RegisterPayload) error {
+func RegisterService(payload *RegisterPayload) error {
 	// check if the email already exists
 	_, err := GetUserByEmail(payload.Email)
 	if err == nil {
