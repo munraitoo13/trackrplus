@@ -8,9 +8,17 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetSubscriptionsHandler(w http.ResponseWriter, r *http.Request) {
+type SubscriptionHandler struct {
+	service *SubscriptionService
+}
+
+func NewSubscriptionHandler(service *SubscriptionService) *SubscriptionHandler {
+	return &SubscriptionHandler{service}
+}
+
+func (h *SubscriptionHandler) GetSubscriptionsHandler(w http.ResponseWriter, r *http.Request) {
 	// gets the user's subscriptions
-	subscriptions, err := GetSubscriptionsService(r.Context())
+	subscriptions, err := h.service.GetSubscriptionsService(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -23,7 +31,7 @@ func GetSubscriptionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+func (h *SubscriptionHandler) GetSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	// get the url param
 	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
@@ -32,7 +40,7 @@ func GetSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// gets the user's specified subscription
-	subscription, err := GetSubscriptionService(r.Context(), subscriptionID)
+	subscription, err := h.service.GetSubscriptionService(r.Context(), subscriptionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -43,26 +51,31 @@ func GetSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(subscription); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
-func CreateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
-	var subscriptionPayload *Subscription
+func (h *SubscriptionHandler) CreateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	subscriptionPayload := Subscription{}
 
 	// tries to decode the body data to payload variable
 	if err := json.NewDecoder(r.Body).Decode(&subscriptionPayload); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
 
 	// tries to create the subscription
-	if err := CreateSubscriptionService(r.Context(), subscriptionPayload); err != nil {
+	if err := h.service.CreateSubscriptionService(r.Context(), subscriptionPayload); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
-func UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
-	var subscriptionPayload *Subscription
+func (h *SubscriptionHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	subscriptionPayload := Subscription{}
 
 	// get the url param
 	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
@@ -76,15 +89,18 @@ func UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
 
 	// tries to update the subscription
-	if err := UpdateSubscriptionService(r.Context(), subscriptionPayload, subscriptionID); err != nil {
+	if err := h.service.UpdateSubscriptionService(r.Context(), subscriptionPayload, subscriptionID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func DeleteSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+func (h *SubscriptionHandler) DeleteSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	// get the url param
 	subscriptionID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
@@ -93,8 +109,10 @@ func DeleteSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// tries to delete the subscription
-	if err := DeleteSubscriptionService(r.Context(), subscriptionID); err != nil {
+	if err := h.service.DeleteSubscriptionService(r.Context(), subscriptionID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -2,76 +2,77 @@ package subscriptions
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var subscriptionColl *mongo.Collection
-
-func RepoInit(client *mongo.Client) {
-	// initializes the collection
-	subscriptionColl = client.Database("trackrplus").Collection("subscriptions")
+// repository for subscriptions
+type SubscriptionRepository struct {
+	coll *mongo.Collection
 }
 
-func GetSubscriptions(userID primitive.ObjectID) (*Subscriptions, error) {
-	var subscriptions Subscriptions
+// creates a new user repository
+func NewSubscriptionRepository(client *mongo.Client) *SubscriptionRepository {
+	return &SubscriptionRepository{
+		coll: client.Database("trackrplus").Collection("subscriptions"),
+	}
+}
+
+func (r *SubscriptionRepository) GetSubscriptions(userID primitive.ObjectID) (Subscriptions, error) {
+	subscriptions := Subscriptions{}
 
 	// gets the subscriptions from db
-	cursor, err := subscriptionColl.Find(context.TODO(), bson.M{"userID": userID})
+	cursor, err := r.coll.Find(context.TODO(), bson.M{"userID": userID})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get subscriptions: %w", err)
 	}
+	defer cursor.Close(context.Background())
 
 	// decodes all subscriptions
 	if err := cursor.All(context.TODO(), &subscriptions); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode subscriptions: %w", err)
 	}
 
-	return &subscriptions, nil
+	return subscriptions, nil
 }
 
-func GetSubscription(userID primitive.ObjectID, subscriptionID primitive.ObjectID) (*Subscription, error) {
-	var subscription Subscription
+func (r *SubscriptionRepository) GetSubscription(userID primitive.ObjectID, subscriptionID primitive.ObjectID) (Subscription, error) {
+	subscription := Subscription{}
 
 	// gets the subscription from db
-	sub := subscriptionColl.FindOne(context.TODO(), bson.M{"userID": userID, "_id": subscriptionID})
-	if sub.Err() != nil {
-		return nil, sub.Err()
+	if err := r.coll.FindOne(context.TODO(), bson.M{"userID": userID, "_id": subscriptionID}).Decode(&subscription); err != nil {
+		return Subscription{}, fmt.Errorf("failed to get subscription: %w", err)
 	}
 
-	// decodes the subscription
-	if err := sub.Decode(&subscription); err != nil {
-		return nil, err
-	}
-
-	return &subscription, nil
+	return subscription, nil
 }
 
-func CreateSubscription(subscription *Subscription) error {
+func (r *SubscriptionRepository) CreateSubscription(subscription Subscription) error {
 	// add subscription to the db
-	_, err := subscriptionColl.InsertOne(context.TODO(), subscription)
+	_, err := r.coll.InsertOne(context.TODO(), subscription)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create subscription: %w", err)
 	}
 
 	return nil
 }
 
-func DeleteSubscription(subscriptionID primitive.ObjectID) error {
-	_, err := subscriptionColl.DeleteOne(context.TODO(), bson.M{"_id": subscriptionID})
+func (r *SubscriptionRepository) DeleteSubscription(subscriptionID primitive.ObjectID, userID primitive.ObjectID) error {
+	_, err := r.coll.DeleteOne(context.TODO(), bson.M{"userID": userID, "_id": subscriptionID})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete subscription: %w", err)
 	}
 
 	return nil
 }
 
-func UpdateSubscription(subscriptionID primitive.ObjectID, subscription *Subscription) error {
-	_, err := subscriptionColl.ReplaceOne(context.TODO(), bson.M{"_id": subscriptionID}, subscription)
+func (r *SubscriptionRepository) UpdateSubscription(subscriptionID primitive.ObjectID, subscription Subscription, userID primitive.ObjectID) error {
+	_, err := r.coll.ReplaceOne(context.TODO(), bson.M{"userID": userID, "_id": subscriptionID}, subscription)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update subscription: %w", err)
 	}
 
 	return nil

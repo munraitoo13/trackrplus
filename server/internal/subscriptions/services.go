@@ -3,54 +3,61 @@ package subscriptions
 import (
 	"context"
 	"errors"
+	"fmt"
+	"server/internal/middlewares"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetSubscriptionsService(ctx context.Context) (*Subscriptions, error) {
+type SubscriptionService struct {
+	repo *SubscriptionRepository
+}
+
+func NewSubscriptionService(repo *SubscriptionRepository) *SubscriptionService {
+	return &SubscriptionService{repo}
+}
+
+func (s *SubscriptionService) GetSubscriptionsService(ctx context.Context) (Subscriptions, error) {
 	// gets the user id from the token
-	userID := ctx.Value("userID").(primitive.ObjectID)
+	userID := ctx.Value(middlewares.UserIDKey).(primitive.ObjectID)
 
 	// gets the subscriptions
-	subscriptions, err := GetSubscriptions(userID)
+	subscriptions, err := s.repo.GetSubscriptions(userID)
 	if err != nil {
-		return nil, errors.New("error getting subscriptions")
+		return nil, fmt.Errorf("error getting subscriptions: %v", err)
 	}
 
 	// checks if the user has any subscriptions
-	if len(*subscriptions) == 0 {
-		return &Subscriptions{}, nil
+	if len(subscriptions) == 0 {
+		return Subscriptions{}, errors.New("no subscriptions found")
 	}
 
 	return subscriptions, nil
 }
 
-func GetSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) (*Subscription, error) {
+func (s *SubscriptionService) GetSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) (Subscription, error) {
 	// gets the user id from the token
-	userID := ctx.Value("userID").(primitive.ObjectID)
+	userID := ctx.Value(middlewares.UserIDKey).(primitive.ObjectID)
 
 	// gets the subscription
-	subscription, err := GetSubscription(userID, subscriptionID)
+	subscription, err := s.repo.GetSubscription(userID, subscriptionID)
 	if err != nil {
-		return nil, errors.New("error getting subscriptions")
+		return Subscription{}, errors.New("error getting subscriptions")
 	}
 
-	// checks if the subscription exists
-	if subscription == nil {
-		return nil, errors.New("subscription not found")
-	}
-
+	// checks if the user is allowed to access the subscription
 	if subscription.UserID != userID {
-		return nil, errors.New("unauthorized")
+		return Subscription{}, errors.New("unauthorized: user is not allowed to access this subscription")
 	}
 
 	return subscription, nil
 }
 
-func CreateSubscriptionService(ctx context.Context, payload *Subscription) error {
-	userID := ctx.Value("userID").(primitive.ObjectID)
+func (s *SubscriptionService) CreateSubscriptionService(ctx context.Context, payload Subscription) error {
+	userID := ctx.Value(middlewares.UserIDKey).(primitive.ObjectID)
 
-	subscription := &Subscription{
+	// creates a new subscription object
+	subscription := Subscription{
 		UserID:        userID,
 		Name:          payload.Name,
 		Price:         payload.Price,
@@ -62,26 +69,30 @@ func CreateSubscriptionService(ctx context.Context, payload *Subscription) error
 		CreatedAt:     payload.CreatedAt,
 	}
 
-	if err := CreateSubscription(subscription); err != nil {
-		return errors.New("error creating subscription")
+	// tries creates the subscription
+	if err := s.repo.CreateSubscription(subscription); err != nil {
+		return fmt.Errorf("error creating subscription: %v", err)
 	}
 
 	return nil
 }
 
-func UpdateSubscriptionService(ctx context.Context, payload *Subscription, subscriptionID primitive.ObjectID) error {
-	userID := ctx.Value("userID").(primitive.ObjectID)
+func (s *SubscriptionService) UpdateSubscriptionService(ctx context.Context, payload Subscription, subscriptionID primitive.ObjectID) error {
+	userID := ctx.Value(middlewares.UserIDKey).(primitive.ObjectID)
 
-	existingSubscription, err := GetSubscription(userID, subscriptionID)
+	// gets the existing subscription
+	existingSubscription, err := s.repo.GetSubscription(userID, subscriptionID)
 	if err != nil {
-		return errors.New("error getting subscriptions")
+		return fmt.Errorf("error getting existing subscriptions: %v", err)
 	}
 
-	if existingSubscription == nil || existingSubscription.UserID != userID {
-		return errors.New("unauthorized")
+	// checks if the user is allowed to update the subscription
+	if existingSubscription.UserID != userID {
+		return errors.New("unauthorized: user is not allowed to update this subscription")
 	}
 
-	subscription := &Subscription{
+	// creates a new subscription object
+	subscription := Subscription{
 		UserID:        userID,
 		Name:          payload.Name,
 		Price:         payload.Price,
@@ -93,27 +104,31 @@ func UpdateSubscriptionService(ctx context.Context, payload *Subscription, subsc
 		CreatedAt:     existingSubscription.CreatedAt,
 	}
 
-	if err := UpdateSubscription(subscriptionID, subscription); err != nil {
-		return errors.New("error creating subscription")
+	// tries to update the subscription
+	if err := s.repo.UpdateSubscription(subscriptionID, subscription, userID); err != nil {
+		return fmt.Errorf("error updating subscription: %v", err)
 	}
 
 	return nil
 }
 
-func DeleteSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) error {
-	userID := ctx.Value("userID").(primitive.ObjectID)
+func (s *SubscriptionService) DeleteSubscriptionService(ctx context.Context, subscriptionID primitive.ObjectID) error {
+	userID := ctx.Value(middlewares.UserIDKey).(primitive.ObjectID)
 
-	existingSubscription, err := GetSubscription(userID, subscriptionID)
+	// gets the existing subscription
+	existingSubscription, err := s.repo.GetSubscription(userID, subscriptionID)
 	if err != nil {
-		return errors.New("error getting subscriptions")
+		return fmt.Errorf("error getting existing subscriptions: %v", err)
 	}
 
-	if existingSubscription == nil || existingSubscription.UserID != userID {
-		return errors.New("unauthorized")
+	// checks if the user is allowed to delete the subscription
+	if existingSubscription.UserID != userID {
+		return errors.New("unauthorized: user is not allowed to delete this subscription")
 	}
 
-	if err := DeleteSubscription(subscriptionID); err != nil {
-		return errors.New("error deleting subscription")
+	// tries to delete the subscription
+	if err := s.repo.DeleteSubscription(subscriptionID, userID); err != nil {
+		return fmt.Errorf("error deleting subscription: %v", err)
 	}
 
 	return nil

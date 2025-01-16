@@ -2,13 +2,12 @@ package routes
 
 import (
 	"server/internal/auth"
-	"server/internal/middlewares"
 	"server/internal/subscriptions"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func SetupRoutes(r chi.Router) {
+func SetupRoutes(r chi.Router, auth *auth.AuthHandler, subscriptions *subscriptions.SubscriptionHandler) {
 	r.Route("/api", func(r chi.Router) {
 		// auth
 		r.Route("/auth", func(r chi.Router) {
@@ -18,7 +17,6 @@ func SetupRoutes(r chi.Router) {
 
 		// subscriptions
 		r.Route("/subscriptions", func(r chi.Router) {
-			r.Use(middlewares.AuthMiddleware)
 			r.Get("/", subscriptions.GetSubscriptionsHandler)
 			r.Post("/", subscriptions.CreateSubscriptionHandler)
 

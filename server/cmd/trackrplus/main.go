@@ -7,6 +7,7 @@ import (
 
 	"server/configs"
 	"server/internal/auth"
+	"server/internal/middlewares"
 	"server/internal/routes"
 	"server/internal/subscriptions"
 
@@ -24,9 +25,7 @@ func main() {
 	// initializing the router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-
-	// setting up the routes
-	routes.SetupRoutes(r)
+	r.Use(middlewares.AuthMiddleware)
 
 	// setting up the mongo client
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
@@ -35,8 +34,19 @@ func main() {
 	}
 
 	// initializing repos
-	auth.RepoInit(client)
-	subscriptions.RepoInit(client)
+	authRepo := auth.NewAuthRepository(client)
+	subscriptionRepo := subscriptions.NewSubscriptionRepository(client)
+
+	// initializing services
+	authService := auth.NewAuthService(authRepo)
+	subscriptionService := subscriptions.NewSubscriptionService(subscriptionRepo)
+
+	// initializing handlers
+	authHandler := auth.NewAuthHandler(authService)
+	subscriptionHandler := subscriptions.NewSubscriptionHandler(subscriptionService)
+
+	// setting up the routes
+	routes.SetupRoutes(r, authHandler, subscriptionHandler)
 
 	// closing the mongo client
 	defer func() {

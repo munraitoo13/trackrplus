@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -9,33 +10,40 @@ import (
 	"server/internal/common"
 )
 
-func LoginService(payload *LoginPayload) (string, error) {
-	var err error
+type AuthService struct {
+	repo *AuthRepository
+}
 
+func NewAuthService(repo *AuthRepository) *AuthService {
+	return &AuthService{repo}
+}
+
+func (s *AuthService) LoginService(payload LoginPayload) (string, error) {
 	// gets user by its email
-	user, err := GetUserByEmail(payload.Email)
+	user, err := s.repo.GetUserByEmail(payload.Email)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("user not found: %v", err)
 	}
 
 	// compare pass input with hashed one in db
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password))
 	if err != nil {
-		return "", errors.New("invalid credentials")
+		return "", fmt.Errorf("invalid password: %v", err)
 	}
 
 	// generate the jwt token
 	token, err := common.GenerateToken(user.ID)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate token: %v", err)
 	}
 
+	// return the token
 	return token, nil
 }
 
-func RegisterService(payload *RegisterPayload) error {
+func (s *AuthService) RegisterService(payload RegisterPayload) error {
 	// check if the email already exists
-	_, err := GetUserByEmail(payload.Email)
+	_, err := s.repo.GetUserByEmail(payload.Email)
 	if err == nil {
 		return errors.New("email already exists")
 	}
@@ -43,11 +51,11 @@ func RegisterService(payload *RegisterPayload) error {
 	// hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
 
 	// create a new user object
-	user := &User{
+	user := User{
 		Name:      payload.Name,
 		Username:  payload.Username,
 		Email:     payload.Email,
@@ -59,9 +67,5 @@ func RegisterService(payload *RegisterPayload) error {
 	}
 
 	// register the user
-	if err := RegisterUser(user); err != nil {
-		return err
-	}
-
-	return nil
+	return s.repo.RegisterUser(user)
 }

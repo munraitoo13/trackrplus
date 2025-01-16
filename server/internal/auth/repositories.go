@@ -2,31 +2,42 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var userColl *mongo.Collection
-
-func RepoInit(client *mongo.Client) {
-	userColl = client.Database("trackrplus").Collection("users")
+// repository for users
+type AuthRepository struct {
+	coll *mongo.Collection
 }
 
-func GetUserByEmail(email string) (*User, error) {
-	var user *User
-	err := userColl.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+// creates a new user repository
+func NewAuthRepository(client *mongo.Client) *AuthRepository {
+	return &AuthRepository{
+		coll: client.Database("trackrplus").Collection("users"),
+	}
+}
+
+func (r *AuthRepository) GetUserByEmail(email string) (User, error) {
+	// create a user object
+	user := User{}
+
+	// find the user by email
+	err := r.coll.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
 	if err != nil {
-		return nil, err
+		return User{}, fmt.Errorf("user with email %s not found: %w", email, err)
 	}
 
 	return user, nil
 }
 
-func RegisterUser(user *User) error {
-	_, err := userColl.InsertOne(context.TODO(), user)
+func (r *AuthRepository) RegisterUser(user User) error {
+	// insert the user to the db
+	_, err := r.coll.InsertOne(context.TODO(), user)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to register the user: %w", err)
 	}
 
 	return nil
